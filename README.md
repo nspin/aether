@@ -1,2 +1,2 @@
-# shawarma
-A slim Mainline BitTorrent Distributed Hashtable implementation.
+# aether
+A slim mainline BitTorrent distributed hash table implementation.
