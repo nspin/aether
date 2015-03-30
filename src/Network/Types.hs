@@ -1,4 +1,4 @@
-module Network.Protocol.BitTorrent.DHT.Types
+module Network.Types
     (
     ) where
 
