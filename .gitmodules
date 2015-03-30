@@ -1,0 +1,6 @@
+[submodule "aux/wordplay"]
+	path = aux/wordplay
+	url = https://github.com/nickspinale/wordplay.git
+[submodule "aux/aencode"]
+	path = aux/aencode
+	url = https://github.com/nickspinale/aencode.git
