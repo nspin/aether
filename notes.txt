@@ -20,9 +20,6 @@ instance IP Word128 where
 urlify160 :: B.ByteString -> String
 urlify160 = toListOf (bytes . to (('%':) . hexify) . traverse)
 
-hexify :: Word8 -> String
-hexify w = split' w ^.. both . to (genericIndex "0123456789ABCDEF")
-
 ----------------------------------------
 -- IP
 ----------------------------------------
@@ -49,12 +46,3 @@ all5 f (a, b, c, d, e) = (,,,,) <$> f a <*> f b <*> f c <*> f d <*> f e
 
 -- Helpful parser combinators
 
-blockWith :: (a -> Bool) -> Parser a -> Parser a
-blockWith = flip blockWithThen id
-
-blockWithThen :: (a -> Bool) -> (a -> b) -> Parser a -> Parser b
-blockWithThen f g = (>>= \x -> if f x then return (g x) else empty)
-
-filterWith :: (a -> Maybe b) -> Parser a -> Parser b
-filterWith f = (>>= \x -> case f x of Just y -> return y
-                                      Nothing -> empty)

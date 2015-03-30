@@ -4,3 +4,9 @@
 [submodule "aux/aencode"]
 	path = aux/aencode
 	url = https://github.com/nickspinale/aencode.git
+[submodule "aux/bytestring-more"]
+	path = aux/bytestring-more
+	url = https://github.com/nickspinale/bytestring-more.git
+[submodule "aux/attoparsec-more"]
+	path = aux/attoparsec-more
+	url = https://github.com/nickspinale/attoparsec-more.git
