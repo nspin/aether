@@ -1,0 +1,60 @@
+class IP a where
+    parser :: Parser a
+    write :: a -> Builder
+
+instance IP Word32 where
+    parser = anyWord32be
+    write = word32BE
+
+instance IP Word128 where
+    parser = (,,,) <$> anyWord32be
+                   <*> anyWord32be
+                   <*> anyWord32be
+                   <*> anyWord32be
+    write = mconcat . map word32BE . toListOf all4
+
+----------------------------------------
+-- ENCODING
+----------------------------------------
+
+urlify160 :: B.ByteString -> String
+urlify160 = toListOf (bytes . to (('%':) . hexify) . traverse)
+
+hexify :: Word8 -> String
+hexify w = split' w ^.. both . to (genericIndex "0123456789ABCDEF")
+
+----------------------------------------
+-- IP
+----------------------------------------
+
+-- Show Word32 as an IPv4 address
+drawIPv4 :: Word32 -> String
+drawIPv4 = intercalate "." . map show . B.unpack . write32
+
+-- TODO make not super lame
+drawIPv6 :: Word128 -> String
+drawIPv6 = intercalate ":"
+         . map (concatMap (map toLower . hexify . fromIntegral) . toListOf both . split')
+         . toListOf (all4 . to split' . both)
+
+----------------------------------------
+-- HELPERS
+----------------------------------------
+
+all4 :: Traversal (a, a, a, a) (b, b, b, b) a b
+all4 f (a, b, c, d) = (,,,) <$> f a <*> f b <*> f c <*> f d
+
+all5 :: Traversal (a, a, a, a, a) (b, b, b, b, b) a b
+all5 f (a, b, c, d, e) = (,,,,) <$> f a <*> f b <*> f c <*> f d <*> f e
+
+-- Helpful parser combinators
+
+blockWith :: (a -> Bool) -> Parser a -> Parser a
+blockWith = flip blockWithThen id
+
+blockWithThen :: (a -> Bool) -> (a -> b) -> Parser a -> Parser b
+blockWithThen f g = (>>= \x -> if f x then return (g x) else empty)
+
+filterWith :: (a -> Maybe b) -> Parser a -> Parser b
+filterWith f = (>>= \x -> case f x of Just y -> return y
+                                      Nothing -> empty)

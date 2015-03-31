@@ -10,20 +10,14 @@ import           Data.Word.Play
 
 data Message = Message
     { transaction :: B.ByteString
-    , readOnly :: Bool
     , content :: Content
     }
 
-data Content = Query
-                { id :: Word160
-                , query :: Query
-                }
-             | Response
-             | Error Integer B.ByteString
+data Content = Query Bool Word160 Query
+             | Response Word160 Response
+             | Error Error String
 
-data Query = Ping
-                { id :: Word160
-                }
+data Query = Pong
            | FindNode
                 { target :: Word160
                 }
@@ -42,11 +36,16 @@ data Query = Ping
            | GetVar
 
 data Response = Pong Word160
-              | FoundNode [Node]
+              | FoundNode
+                    { nodes :: [Node Word32]
+                    , nodes6 :: [Node Word128]
+                    }
               | GotPeers
                     { token :: B.ByteString
-                    , values :: [Peer]
+                    , answer :: Either [Peer] [Node a]
                     }
+
+data Error = Generic | Server | Protocol | Method | Other Integer
 
 instance ToAeson Message where
     encode = undefined
