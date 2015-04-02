@@ -2,10 +2,10 @@ module Network.Aether.Types
     (
     ) where
 
+import           Control.Concurrent.STM
 import           Data.Acid
 import           Data.Aencode
 import qualified Data.ByteString as B
-import           Data.Concurrent.STM
 
 -- data Message = Message
 --     { transaction :: B.ByteString
