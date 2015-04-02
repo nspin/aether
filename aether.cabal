@@ -22,12 +22,11 @@ library
   build-depends:       aencode,
                        acid-state,
                        attoparsec >= 0.10,
-                       attoparsec-more,
                        base >= 4.7,
                        bytestring >= 0.10.2,
-                       bytestring-more,
                        containers,
                        largeword,
                        lens,
-                       stm
+                       stm,
+                       wordplay
   default-language:    Haskell2010
