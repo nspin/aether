@@ -17,7 +17,7 @@ extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Network.Aether.Types,
+  exposed-modules:     Network.Aether.Types
   other-extensions:    TemplateHaskell
   build-depends:       acid-state >= 0.12,
                        base > 4.7,
