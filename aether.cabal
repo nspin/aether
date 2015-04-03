@@ -14,7 +14,10 @@ extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Network.Aether.Types
+  exposed-modules:     Network.Aether.Core
+                       Network.Aether.Flow
+                       Network.Aether.Internal
+                       Network.Aether.Types
   -- other-extensions:
   build-depends:       aencode,
                        acid-state,
@@ -24,6 +27,7 @@ library
                        containers,
                        largeword,
                        lens,
+                       network,
                        stm,
                        wordplay
   default-language:    Haskell2010

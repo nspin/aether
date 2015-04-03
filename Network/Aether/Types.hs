@@ -1,11 +1,22 @@
+{-# LANGUAGE TypeFamilies #-}
+
 module Network.Aether.Types
     (
     ) where
+
+import           Network.Aether.Internal
 
 import           Control.Concurrent.STM
 import           Data.Acid
 import           Data.Aencode
 import qualified Data.ByteString as B
+
+type BBDict = BDict B.ByteString
+
+-- data Query 
+
+-- class Method a where
+--     data Response a :: *
 
 -- data Message = Message
 --     { transaction :: B.ByteString
@@ -16,23 +27,28 @@ import qualified Data.ByteString as B
 --              | Response Word160 Response
 --              | Error Error String
 
--- data Query = Pong
---            | FindNode
---                 { target :: Word160
---                 }
---            | GetPeers
---                 { infoHash :: Word160
---                 , noseed :: Bool
---                 , scrape :: Bool
---                 }
---            | AnnouncePeer
---                 { infoHash :: Word160
---                 , port :: Maybe Word16
---                 , token :: B.ByteString
---                 , seed :: Bool
---                 }
---            | GetVal
---            | GetVar
+data Method = Ping
+                 { id :: Word160
+                 }
+            | FindNode
+                 { id :: Word160
+                 , target :: Word160
+                 }
+            | GetPeers
+                 { id :: Word160
+                 , info_hash :: Word160
+                 , noseed :: Bool
+                 , scrape :: Bool
+                 }
+            | AnnouncePeer
+                 { id :: Word160
+                 , info_hash :: Word160
+                 , port :: Maybe Word160
+                 , token :: B.ByteString
+                 , seed :: Bool
+                 }
+            | GetVal
+            | GetVar
 
 -- data Response = Pong Word160
 --               | FoundNode
