@@ -29,5 +29,7 @@ library
                        lens,
                        network,
                        stm,
+                       -- unix-time
+                       time,
                        wordplay
   default-language:    Haskell2010

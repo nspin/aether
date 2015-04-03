@@ -10,78 +10,56 @@ import           Control.Concurrent.STM
 import           Data.Acid
 import           Data.Aencode
 import qualified Data.ByteString as B
+import           Data.ByteString.Builder
+import           Data.Time.Clock
+import           Data.Word
 
-type BBDict = BDict B.ByteString
+data Env = Env
 
--- data Query 
+class Method a where
+    data Response a :: *
+    parseQuery :: BDict B.ByteString -> Maybe a
+    parseResp  :: BDict B.ByteString -> Maybe a
+    respond    :: Env -> a -> STM (Either Error (Response a))
+    buildResp  :: Env -> Response a -> BDict Builder
 
--- class Method a where
---     data Response a :: *
+data Error = Error ErrorCode B.ByteString
 
--- data Message = Message
---     { transaction :: B.ByteString
---     , content :: Content
---     }
+data ErrorCode = Generic | Server | Protocol | Method | Other Integer
 
--- data Content = Query Bool Word160 Query
---              | Response Word160 Response
---              | Error Error String
+data Ping = Ping
 
-data Method = Ping
-                 { id :: Word160
-                 }
-            | FindNode
-                 { id :: Word160
-                 , target :: Word160
-                 }
-            | GetPeers
-                 { id :: Word160
-                 , info_hash :: Word160
-                 , noseed :: Bool
-                 , scrape :: Bool
-                 }
-            | AnnouncePeer
-                 { id :: Word160
-                 , info_hash :: Word160
-                 , port :: Maybe Word160
-                 , token :: B.ByteString
-                 , seed :: Bool
-                 }
-            | GetVal
-            | GetVar
+data FindNode = FindNode Word160
 
--- data Response = Pong Word160
---               | FoundNode
---                     { nodes :: [Node Word32]
---                     , nodes6 :: [Node Word128]
---                     }
---               | GotPeers
---                     { token :: B.ByteString
---                     , answer :: Either [Peer] [Node a]
---                     }
+data GetPeers = GetPeers { info_hash_g :: Word160
+                         , noseed :: Bool
+                         , scrape :: Bool
+                         }
 
--- data Error = Generic | Server | Protocol | Method | Other Integer
+data AnnouncePeer = AnnouncePeer { info_hash_a :: Word160
+                                 , port_a :: Maybe Word160
+                                 , token :: B.ByteString
+                                 , seed :: Bool
+                                 }
 
--- instance ToAeson Message where
---     encode = undefined
+data GetVal = GetVal 
 
--- instance FromAeson Message where
---     decode = undefined
+data GetVar = GetVar 
 
--- data Node a = Node
---     { location :: Word160
---     , port     :: Word16
---     , addr     :: a
---     }
+data Node a = Node
+    { location :: Word160
+    , port_n   :: Word16
+    , addr     :: a
+    }
 
--- data Peer a = Peer
---     { node :: Node
---     , last :: UnixTime
---     , answered :: Bool
---     }
+data Peer a = Peer
+    { node :: Node a
+    , last :: UTCTime
+    , answered :: Bool
+    }
 
 -- type RespState = M.Map B.ByteString TMVar
 
 -- -- Acidic
--- type Buckets = [[Node]]
+type Buckets a = [[Peer a]]
 
