@@ -20,8 +20,11 @@ class Method a where
     data Response a :: *
     parseQuery :: BDict B.ByteString -> Maybe a
     parseResp  :: BDict B.ByteString -> Maybe a
-    respond    :: Env -> a -> STM (Either Error (Response a))
+    buildQuery :: Env -> Response a -> BDict Builder
     buildResp  :: Env -> Response a -> BDict Builder
+    respond    :: Env -> a -> STM (Either Error (Response a))
+
+build
 
 data Error = Error ErrorCode B.ByteString
 
