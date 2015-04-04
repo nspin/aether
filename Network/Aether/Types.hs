@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE OverloadedString #-}
 
 module Network.Aether.Types
     (
@@ -28,10 +29,14 @@ class Method a where
     decodeResp  :: BDict B.ByteString -> Maybe (Response a)
     -- respond    :: Env -> a -> STM (Either Error (Response a))
 
-data Ping = Ping { id_p :: Word160 }
+data Ping = Ping Word160
 
 instance Method Ping where
-
+    data Response Ping = Pong Word160
+    encodeQuery (Ping id) = M.singleton (string8 "id", id)
+    encodeResp  (Pong id) = M.singleton (string8 "id", id)
+    decodeQuery = fmap Ping . M.lookup "id"
+    decodeResp  = fmap Pong . M.lookup "id"
 
 data FindNode = FindNode { id_f :: Word160
                          , target :: Word160
