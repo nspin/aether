@@ -5,7 +5,7 @@
 
 module Network.Aether.Types
     (
-      Env
+      Env(..)
   --
 
     , Method (Response, decodeQuery, decodeResp)
@@ -13,12 +13,12 @@ module Network.Aether.Types
     , pkgResp
     , pkgError
 
-    , Ping
-    , FindNode
-    , GetPeers
-    , AnnouncePeer
-    , GetVal
-    , GetVar
+    , Ping(..)
+    , FindNode(..)
+    , GetPeers(..)
+    , AnnouncePeer(..)
+    , GetVal(..)
+    , GetVar(..)
   --
 
     , Error
@@ -119,11 +119,11 @@ pbs = BString . prefix
 -- METHODS
 ------------------
 
-data Ping = Ping Word160
+data Ping = Ping Word160 deriving Show
 
 instance Method Ping where
     name _ = "ping"
-    data Response Ping = Pong Word160
+    data Response Ping = Pong Word160 deriving Show
     writeQuery (Ping id) = [("id", BString $ prefixBE id)]
     writeResp  (Pong id) = [("id", BString $ prefixBE id)]
     decodeQuery = fmap Ping . (M.lookup "id" >=> asString >=> onlyDo parseBE)
@@ -171,9 +171,9 @@ data GetVar = GetVar
 -- ERROR
 -------------------
 
-data Error = Error ErrorCode B.ByteString
+data Error = Error ErrorCode B.ByteString deriving Show
 
-data ErrorCode = Generic | Server | Protocol | Method | Other Integer
+data ErrorCode = Generic | Server | Protocol | Method | Other Integer deriving Show
 
 decodeError :: [BValue B.ByteString] -> Maybe Error
 decodeError (BInt n : BString str : _) = Just $ Error (nameOf n) str
@@ -220,11 +220,11 @@ type Word128 = LargeKey Word32 Word96
 type Word160 = LargeKey Word32 Word128
 
 instance IP IPv4 where
-    sayAddr (Addr ip port) = SockAddrInet (PortNum port) ip
+    sayAddr (Addr ip port) = SockAddrInet (PortNum $ changeByteOrder port) ip
     family _ = AF_INET
 
 instance IP IPv6 where
-    sayAddr (Addr ip port) = SockAddrInet6 (PortNum port) 0 (toTuple ip) 0
+    sayAddr (Addr ip port) = SockAddrInet6 (PortNum $ changeByteOrder port) 0 (toTuple ip) 0
     family _ = AF_INET6
 
 toTuple :: Word128 -> HostAddress6 

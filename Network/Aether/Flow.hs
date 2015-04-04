@@ -1,5 +1,7 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Network.Aether.Flow
-    (
+    ( ask
     ) where
 
 import           Network.Aether.Types
@@ -15,7 +17,7 @@ import           Network.Socket hiding (sendTo)
 import           Network.Socket.ByteString
 
 post :: Env a -> STM (B.ByteString, TMVar (Maybe (Either Error (BDict B.ByteString))))
-post = undefined
+post _ = return ("hi", undefined)
 
 emme :: Either a (Maybe b) -> Maybe (Either a b)
 emme (Left  l) = Just $ Left l
