@@ -16,38 +16,65 @@ import           Data.Word
 
 data Env = Env
 
+------------------
+-- METHODS
+------------------
+
 class Method a where
     data Response a :: *
-    parseQuery :: BDict B.ByteString -> Maybe a
-    parseResp  :: BDict B.ByteString -> Maybe a
-    buildQuery :: Env -> Response a -> BDict Builder
-    buildResp  :: Env -> Response a -> BDict Builder
-    respond    :: Env -> a -> STM (Either Error (Response a))
+    encodeQuery :: a -> BDict Builder
+    encodeResp  :: Response a -> BDict Builder
+    decodeQuery :: BDict B.ByteString -> Maybe a
+    decodeResp  :: BDict B.ByteString -> Maybe (Response a)
+    -- respond    :: Env -> a -> STM (Either Error (Response a))
 
-build
+data Ping = Ping { id_p :: Word160 }
 
-data Error = Error ErrorCode B.ByteString
+instance Method Ping where
 
-data ErrorCode = Generic | Server | Protocol | Method | Other Integer
 
-data Ping = Ping
+data FindNode = FindNode { id_f :: Word160
+                         , target :: Word160
+                         }
 
-data FindNode = FindNode Word160
-
-data GetPeers = GetPeers { info_hash_g :: Word160
+data GetPeers = GetPeers { id_g :: Word160
+                         , info_hash_g :: Word160
                          , noseed :: Bool
                          , scrape :: Bool
                          }
 
-data AnnouncePeer = AnnouncePeer { info_hash_a :: Word160
+data AnnouncePeer = AnnouncePeer { id_a :: Word160
+                                 , info_hash_a :: Word160
                                  , port_a :: Maybe Word160
                                  , token :: B.ByteString
                                  , seed :: Bool
                                  }
 
-data GetVal = GetVal 
+data GetVal = GetVal
 
-data GetVar = GetVar 
+data GetVar = GetVar
+
+-------------------
+-- ERROR
+-------------------
+
+data Error = Error ErrorCode B.ByteString
+
+data ErrorCode = Generic | Server | Protocol | Method | Other Integer
+
+codeOf :: ErrorCode -> Integer
+codeOf Generic   = 201
+codeOf Server    = 202
+codeOf Protocol  = 203
+codeOf Method    = 204
+codeOf (Other n) = n
+
+encodeError :: Error -> [BValue B.ByteString]
+encodeError (Error c s) = [BInt (codeOf c), BString s]
+
+-------------------
+-- OTHER
+-------------------
 
 data Node a = Node
     { location :: Word160
