@@ -14,10 +14,9 @@ extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Network.Aether.Core
+  exposed-modules:     Network.Aether.Types
+                       Network.Aether.Core
                        Network.Aether.Flow
-                       Network.Aether.Internal
-                       Network.Aether.Types
   -- other-extensions:
   build-depends:       aencode,
                        acid-state,

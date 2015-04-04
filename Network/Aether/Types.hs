@@ -5,9 +5,53 @@
 
 module Network.Aether.Types
     (
-    ) where
+      Env
+  --
 
-import           Network.Aether.Internal
+    , Method (Response, decodeQuery, decodeResp)
+    , pkgQuery
+    , pkgResp
+    , pkgError
+
+    , Ping
+    , FindNode
+    , GetPeers
+    , AnnouncePeer
+    , GetVal
+    , GetVar
+  --
+
+    , Error
+    , ErrorCode
+    , decodeError
+  --
+
+    , Want
+    , parseWant
+    , buildWant
+
+    , IP(..)
+    , IPv4
+    , IPv6
+
+    , Addr(..)
+    , parseAddr
+    , buildAddr
+
+    , Node(..)
+    , parseNode
+    , buildNode
+
+    , NodeList(..)
+    , decodeNodeList
+    , encodeNodeList
+  --
+
+    , Word160
+
+    , IBuilder
+
+    ) where
 
 import           Control.Applicative
 import           Control.Concurrent.STM
@@ -16,8 +60,10 @@ import           Control.Monad
 import           Data.Acid
 import           Data.Attoparsec.ByteString
 import           Data.Aencode
+import           Data.Bits
 import qualified Data.ByteString as B
 import           Data.ByteString.Builder
+import           Data.LargeWord (LargeKey(..))
 import           Data.Monoid
 import           Data.Maybe
 import qualified Data.Map as M
@@ -26,15 +72,14 @@ import           Data.Word
 import           Data.Wordplay
 import           Network.Socket
 
-data Env = Env
+data Env a = Env
 
 ------------------
--- METHODS
+-- METHOD
 ------------------
-
-type Mappy = [(B.ByteString, BValue B.ByteString Builder)]
 
 class Method a where
+    name :: a -> B.ByteString
     data Response a :: *
     writeQuery :: a -> Mappy
     writeResp  :: Response a -> Mappy
@@ -42,15 +87,45 @@ class Method a where
     decodeResp  :: BDict B.ByteString -> Maybe (Response a)
     -- respond    :: Env -> a -> STM (Either Error (Response a))
 
-encode :: Mappy -> BDict Builder
-encode = M.fromList . over (traverse._1) byteString
+pkgQuery :: Method a => Bool -> a -> B.ByteString -> BDict IBuilder
+pkgQuery ro q tid = M.fromList $
+    [ ("t", pbs tid)
+    , ("y", pbs "q")
+    , ("q", pbs $ name q)
+    , ("a", BDict $ M.fromList $ writeQuery q)
+    ] ++ ( if ro
+           then [("ro", BInt 1)]
+           else []
+         ) 
+
+pkgResp :: Method a => Response a -> B.ByteString -> BDict IBuilder
+pkgResp r tid = M.fromList
+    [ ("t", pbs tid)
+    , ("y", pbs "r")
+    , ("a", BDict $ M.fromList $ writeResp r)
+    ]
+
+pkgError :: Error -> B.ByteString -> BDict IBuilder
+pkgError (Error c s) tid = M.fromList
+    [ ("t", pbs tid)
+    , ("y", pbs "e")
+    , ("a", BList   $ [BInt (codeOf c), pbs s])
+    ]
+
+pbs :: B.ByteString -> BValue IBuilder
+pbs = BString . prefix
+
+------------------
+-- METHODS
+------------------
 
 data Ping = Ping Word160
 
 instance Method Ping where
+    name _ = "ping"
     data Response Ping = Pong Word160
-    writeQuery (Ping id) = [("id", BString $ buildBE id)]
-    writeResp  (Pong id) = [("id", BString $ buildBE id)]
+    writeQuery (Ping id) = [("id", BString $ prefixBE id)]
+    writeResp  (Pong id) = [("id", BString $ prefixBE id)]
     decodeQuery = fmap Ping . (M.lookup "id" >=> asString >=> onlyDo parseBE)
     decodeResp  = fmap Pong . (M.lookup "id" >=> asString >=> onlyDo parseBE)
 
@@ -63,11 +138,11 @@ instance Method FindNode where
     data Response FindNode = FoundNode { id_fr :: Word160
                                        , nodes_f :: NodeList
                                        }
-    writeQuery (FindNode i t w) = [ ("id", BString $ buildBE i)
-                                  , ("target", BString $ buildBE t)
+    writeQuery (FindNode i t w) = [ ("id", BString $ prefixBE i)
+                                  , ("target", BString $ prefixBE t)
                                   , ("want", BList $ map (BString . buildWant) w)
                                   ]
-    writeResp (FoundNode i ns) = ("id", BString $ buildBE i) : encodeNodeList ns
+    writeResp (FoundNode i ns) = ("id", BString $ prefixBE i) : encodeNodeList ns
 
 data GetPeers = GetPeers { id_g :: Word160
                          , info_hash_g :: Word160
@@ -100,16 +175,16 @@ data Error = Error ErrorCode B.ByteString
 
 data ErrorCode = Generic | Server | Protocol | Method | Other Integer
 
+decodeError :: [BValue B.ByteString] -> Maybe Error
+decodeError (BInt n : BString str : _) = Just $ Error (nameOf n) str
+decodeError _ = Nothing
+
 nameOf :: Integer -> ErrorCode
 nameOf 201 = Generic
 nameOf 202 = Server
 nameOf 203 = Protocol
 nameOf 204 = Method
 nameOf n   = Other n
-
-decodeError :: [BValue B.ByteString] -> Maybe Error
-decodeError (BInt n : BString str : _) = Just $ Error (nameOf n) str
-decodeError _ = Nothing
 
 codeOf :: ErrorCode -> Integer
 codeOf Generic   = 201
@@ -118,42 +193,45 @@ codeOf Protocol  = 203
 codeOf Method    = 204
 codeOf (Other n) = n
 
-encodeError :: Error -> [BValue B.ByteString]
-encodeError (Error c s) = [BInt (codeOf c), BString s]
-
 -------------------
 -- OTHER
 -------------------
+
+type IBuilder = (Sum Integer, Builder)
 
 data Want = N4 | N6
 
 parseWant :: Parser Want
 parseWant = (N4 <$ string "n4") <|> (N6 <$ string "n6")
 
-buildWant :: Want -> Builder
-buildWant N4 = byteString "n4"
-buildWant N6 = byteString "n6"
+buildWant :: Want -> IBuilder
+buildWant N4 = prefix ("n4" :: B.ByteString)
+buildWant N6 = prefix ("n6" :: B.ByteString)
 
-class IP a where
-    meetIP :: Addr a -> ((SockAddr, Socket) -> IO a) -> IO a
-    seeIP :: SockAddr -> Maybe a
-    parseIP :: Parser a
-    writeIP :: a -> Builder
+class (FiniteBits a, Buildable a, Parsable a) => IP a where
+    sayAddr :: Addr a -> SockAddr
+    family :: a -> Family
 
 type IPv4 = Word32
 type IPv6 = Word128
 
+type Word96  = LargeKey Word32 (LargeKey Word32 Word32)
+type Word128 = LargeKey Word32 Word96
+type Word160 = LargeKey Word32 Word128
+
 instance IP IPv4 where
-    meetIP = undefined
-    seeIP = undefined
-    parseIP = parseBE
-    writeIP = buildBE
+    sayAddr (Addr ip port) = SockAddrInet (PortNum port) ip
+    family _ = AF_INET
 
 instance IP IPv6 where
-    meetIP = undefined
-    seeIP = undefined
-    parseIP = parseBE
-    writeIP = buildBE
+    sayAddr (Addr ip port) = SockAddrInet6 (PortNum port) 0 (toTuple ip) 0
+    family _ = AF_INET6
+
+toTuple :: Word128 -> HostAddress6 
+toTuple (LargeKey a (LargeKey b (LargeKey c d))) = (a, b, c, d)
+
+fromTuple :: HostAddress6 -> Word128
+fromTuple (a, b, c, d) = LargeKey a . LargeKey b $ LargeKey c d
 
 data Addr a = Addr
     { ip   :: a
@@ -161,10 +239,10 @@ data Addr a = Addr
     }
 
 parseAddr :: IP a => Parser (Addr a)
-parseAddr = Addr <$> parseIP <*> parseBE
+parseAddr = Addr <$> parseBE <*> parseBE
 
-buildAddr :: IP a => Addr a -> Builder
-buildAddr (Addr i p) = writeIP i <> buildBE p
+buildAddr :: IP a => Addr a -> IBuilder
+buildAddr (Addr i p) = prefixBE i <> prefixBE p
 
 data Node a = Node
     { nid  :: Word160
@@ -174,8 +252,8 @@ data Node a = Node
 parseNode :: IP a => Parser (Node a)
 parseNode = Node <$> parseBE <*> parseAddr
 
-buildNode :: IP a => Node a -> Builder
-buildNode (Node n a) = buildBE n <> buildAddr a
+buildNode :: IP a => Node a -> IBuilder
+buildNode (Node n a) = prefixBE n <> buildAddr a
 
 data NodeList = NodeList { nodes  :: Maybe [Node IPv4]
                          , nodes6 :: Maybe [Node IPv6]
@@ -191,6 +269,10 @@ encodeNodeList :: NodeList -> Mappy
 encodeNodeList (NodeList n4 n6) = catMaybes [go "nodes" n4, go "nodes6" n6]
   where go str = fmap $ (,) str . BString . mcatmap buildNode
 
+------------------
+-- WAT
+------------------
+
 -- data Peer a = Peer
 --     { node :: Node a
 --     , last :: UTCTime
@@ -205,6 +287,8 @@ type Buckets a = [[Node a]]
 ------------------
 -- HELPERS
 ------------------
+ 
+type Mappy = [(B.ByteString, BValue IBuilder)]
 
 mcatmap :: Monoid m => (a -> m) -> [a] -> m
 mcatmap = (.) mconcat . map
