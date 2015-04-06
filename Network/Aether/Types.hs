@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -62,9 +63,11 @@ import           Data.Monoid
 import           Data.Maybe
 import qualified Data.Map as M
 import           Data.Time.Clock
+import           Data.Word
+import           GHC.TypeLits
 import           Network.Socket
 
-data Env a = Env
+data Env (n :: Nat) = Env
 
 ------------------
 -- METHOD
@@ -108,23 +111,23 @@ pkgError (Error c s) tid = M.fromList
 -- METHODS
 ------------------
 
-data Ping = Ping Word160 deriving Show
+data Ping = Ping (W 160) deriving Show
 
 instance Method Ping where
     name _ = "ping"
-    data Response Ping = Pong Word160 deriving Show
+    data Response Ping = Pong (W 160) deriving Show
     writeQuery (Ping id) = [("id", BString $ prefixBE id)]
     writeResp  (Pong id) = [("id", BString $ prefixBE id)]
-    decodeQuery = fmap Ping . (M.lookup "id" >=> asString >=> onlyDo parseBE)
-    decodeResp  = fmap Pong . (M.lookup "id" >=> asString >=> onlyDo parseBE)
+    decodeQuery = fmap Ping . (M.lookup "id" >=> getBString >=> onlyDo parseBE)
+    decodeResp  = fmap Pong . (M.lookup "id" >=> getBString >=> onlyDo parseBE)
 
-data FindNode = FindNode { id_f :: Word160
-                         , target :: Word160
+data FindNode = FindNode { id_f :: W 160
+                         , target :: W 160
                          , want :: [Want]
                          }
 
 instance Method FindNode where
-    data Response FindNode = FoundNode { id_fr :: Word160
+    data Response FindNode = FoundNode { id_fr :: W 160
                                        , nodes_f :: NodeList
                                        }
     writeQuery (FindNode i t w) = [ ("id", BString $ prefixBE i)
@@ -133,21 +136,21 @@ instance Method FindNode where
                                   ]
     writeResp (FoundNode i ns) = ("id", BString $ prefixBE i) : encodeNodeList ns
 
-data GetPeers = GetPeers { id_g :: Word160
-                         , info_hash_g :: Word160
+data GetPeers = GetPeers { id_g :: W 160
+                         , info_hash_g :: W 160
                          , noseed :: Bool
                          , scrape :: Bool
                          }
 
 instance Method GetPeers where
-    data Response GetPeers = GotPeers { id_gr :: Word160
+    data Response GetPeers = GotPeers { id_gr :: W 160
                                       , nodes_g :: NodeList
                                       , values :: Maybe [Either (Addr IPv4) (Addr IPv6)]
                                       }
 
-data AnnouncePeer = AnnouncePeer { id_a :: Word160
-                                 , info_hash_a :: Word160
-                                 , port_a :: Maybe Word160
+data AnnouncePeer = AnnouncePeer { id_a :: W 160
+                                 , info_hash_a :: W 160
+                                 , port_a :: Maybe (W 16)
                                  , token :: B.ByteString
                                  , seed :: Bool
                                  }
@@ -195,12 +198,12 @@ buildWant :: Want -> IBuilder
 buildWant N4 = prefix ("n4" :: B.ByteString)
 buildWant N6 = prefix ("n6" :: B.ByteString)
 
-class (FiniteBits a, Homogenous a Word8) => IP a where
-    sayAddr :: Addr a -> SockAddr
-    family :: a -> Family
+class KnownNat n => IP n where
+    sayAddr :: Addr n -> SockAddr
+    family :: proxy n -> Family
 
-type IPv4 = Word32
-type IPv6 = Word128
+type IPv4 = 32
+type IPv6 = 128
 
 instance IP IPv4 where
     sayAddr (Addr ip port) = SockAddrInet (PortNum $ fromIntegral port) (fromIntegral ip)
@@ -210,16 +213,20 @@ instance IP IPv6 where
     sayAddr (Addr ip port) = SockAddrInet6 (PortNum $ fromIntegral port) 0 (toTuple ip) 0
     family _ = AF_INET6
 
-toTuple :: Word128 -> HostAddress6
-toTuple (LargeKey (LargeKey a b) (LargeKey c d)) = over each fromIntegral (a, b, c, d)
+toTuple :: W 128 -> HostAddress6
+toTuple w = over each (fromIntegral :: W 32 -> Word32) (a, b, c, d)
+  where
+    (a, x) = split w
+    (b, y) = split x
+    (c, d) = split y
 
-fromTuple :: HostAddress6 -> Word128
-fromTuple x = case over each fromIntegral x of
-    (a, b, c, d) -> LargeKey (LargeKey a b) (LargeKey c d)
+fromTuple :: HostAddress6 -> W 128
+fromTuple x = case over each (fromIntegral :: Word32 -> W 32) x of
+    (a, b, c, d) -> a >+< b >+< c >+< d
 
-data Addr a = Addr
-    { ip   :: a
-    , port :: Word16
+data Addr n = Addr
+    { ip   :: W n
+    , port :: W 16
     }
 
 parseAddr :: IP a => Parser (Addr a)
@@ -229,7 +236,7 @@ buildAddr :: IP a => Addr a -> IBuilder
 buildAddr (Addr i p) = prefixBE i <> prefixBE p
 
 data Node a = Node
-    { nid  :: Word160
+    { nid  :: W 160
     , addr :: Addr a
     }
 
@@ -247,7 +254,7 @@ decodeNodeList :: BDict B.ByteString -> NodeList
 decodeNodeList m = NodeList (go "nodes") (go "nodes6")
   where
     go :: IP a => B.ByteString -> Maybe [Node a]
-    go = (`M.lookup` m) >=> asString >=> onlyDo (many' parseNode)
+    go = (`M.lookup` m) >=> getBString >=> onlyDo (many' parseNode)
 
 encodeNodeList :: NodeList -> Mappy
 encodeNodeList (NodeList n4 n6) = catMaybes [go "nodes" n4, go "nodes6" n6]

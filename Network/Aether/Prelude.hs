@@ -3,7 +3,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Network.Aether.Prelude
-    ( parseBE
+    ( pbs
+    , parseBE
     , prefixBE
     , mcatmap
     , onlyDo
@@ -17,16 +18,18 @@ import           Data.ByteString.Builder
 import           Data.BigWord
 import           Data.Monoid
 import qualified Data.Map as M
+import           Data.Proxy
 import           Data.Word (Word8)
+import           GHC.TypeLits
 
-pbs :: Stringable s => s -> BValue IBuilder
-pbs = String . prefix
+pbs :: B.ByteString -> BValue IBuilder
+pbs = BString . prefix
 
 parseBE :: KnownNat n => Parser (W n)
-parseBE = takeBE ((fromIntegral :: Word8 -> W 8) . anyWord8)
+parseBE = accumulate' (fmap (fromIntegral :: Word8 -> W 8) anyWord8)
 
 prefixBE :: forall n. KnownNat n => W n -> IBuilder
-prefixBE w = (Sum bytes, giveBE (word8 . (fromIntegral :: W 8 -> Word8)))
+prefixBE w = (Sum bytes, chunks' (word8 . (fromIntegral :: W 8 -> Word8)) w)
   where bytes = let (q, r) = natVal (Proxy :: Proxy n) `quotRem` 8
                 in case r of 0 -> q
                              _ -> q + 1

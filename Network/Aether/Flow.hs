@@ -23,7 +23,7 @@ emme :: Either a (Maybe b) -> Maybe (Either a b)
 emme (Left  l) = Just $ Left l
 emme (Right r) = Right <$> r
 
-ask :: (IP a, Method b) => Env a -> Bool -> Addr a -> b -> IO (Maybe (Either Error (Response b)))
+ask :: (IP n, Method b) => Env n -> Bool -> Addr n -> b -> IO (Maybe (Either Error (Response b)))
 ask env ro addr q = do
     (tid, hole) <- atomically $ post env
     udpass addr . L.toStrict . toLazyByteString . buildBDict $ pkgQuery ro q tid
@@ -32,7 +32,7 @@ ask env ro addr q = do
         e <- r
         emme $ fmap decodeResp e
 
-udpass :: IP a => Addr a -> B.ByteString -> IO Int
+udpass :: IP n => Addr n -> B.ByteString -> IO Int
 udpass addr pkt = bracket (socket (family $ ip addr) Datagram defaultProtocol)
                           sClose
                           (\s -> sendTo s pkt (sayAddr addr))
