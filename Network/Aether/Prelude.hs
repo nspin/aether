@@ -7,14 +7,6 @@ module Network.Aether.Prelude
     , prefixBE
     , mcatmap
     , onlyDo
-    , IBuilder
-    , Word8
-    , Word16
-    , Word32
-    , Word64
-    , Word128
-    , Word96
-    , Word160
     ) where
 
 import           Control.Lens
