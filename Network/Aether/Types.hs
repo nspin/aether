@@ -128,7 +128,7 @@ encodeError (Error c s) = [BInt (codeOf c), BString s]
 data Want = N4 | N6
 
 parseWant :: Parser Want
-parseWant = (N4 <$ string "n4") <|> (N6 <$ string "n6") 
+parseWant = (N4 <$ string "n4") <|> (N6 <$ string "n6")
 
 buildWant :: Want -> Builder
 buildWant N4 = byteString "n4"
