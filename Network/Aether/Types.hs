@@ -63,13 +63,11 @@ import           Data.Aencode
 import           Data.Bits
 import qualified Data.ByteString as B
 import           Data.ByteString.Builder
-import           Data.LargeWord (LargeKey(..))
+import           Data.Octets
 import           Data.Monoid
 import           Data.Maybe
 import qualified Data.Map as M
 import           Data.Time.Clock
-import           Data.Word
-import           Data.Wordplay
 import           Network.Socket
 
 data Env a = Env
@@ -96,7 +94,7 @@ pkgQuery ro q tid = M.fromList $
     ] ++ ( if ro
            then [("ro", BInt 1)]
            else []
-         ) 
+         )
 
 pkgResp :: Method a => Response a -> B.ByteString -> BDict IBuilder
 pkgResp r tid = M.fromList
@@ -215,9 +213,8 @@ class (FiniteBits a, Buildable a, Parsable a) => IP a where
 type IPv4 = Word32
 type IPv6 = Word128
 
-type Word96  = LargeKey Word32 (LargeKey Word32 Word32)
-type Word128 = LargeKey Word32 Word96
-type Word160 = LargeKey Word32 Word128
+type Word96  = Octets Word64 Word32
+type Word160 = Octets Word128 Word32
 
 instance IP IPv4 where
     sayAddr (Addr ip port) = SockAddrInet (PortNum $ changeByteOrder port) ip
@@ -227,7 +224,7 @@ instance IP IPv6 where
     sayAddr (Addr ip port) = SockAddrInet6 (PortNum $ changeByteOrder port) 0 (toTuple ip) 0
     family _ = AF_INET6
 
-toTuple :: Word128 -> HostAddress6 
+toTuple :: Word128 -> HostAddress6
 toTuple (LargeKey a (LargeKey b (LargeKey c d))) = (a, b, c, d)
 
 fromTuple :: HostAddress6 -> Word128
@@ -287,7 +284,7 @@ type Buckets a = [[Node a]]
 ------------------
 -- HELPERS
 ------------------
- 
+
 type Mappy = [(B.ByteString, BValue IBuilder)]
 
 mcatmap :: Monoid m => (a -> m) -> [a] -> m

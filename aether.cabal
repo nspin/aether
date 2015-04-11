@@ -24,9 +24,9 @@ library
                        base >= 4.7,
                        bytestring >= 0.10.2,
                        containers,
-                       largeword,
                        lens,
                        network,
+                       octets,
                        stm,
                        -- unix-time
                        time,
