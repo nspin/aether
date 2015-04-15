@@ -17,6 +17,7 @@ library
   exposed-modules:     Network.Aether.Types
                        Network.Aether.Core
                        Network.Aether.Flow
+                       Network.Aether.Prelude
   -- other-extensions:
   build-depends:       aencode,
                        attoparsec >= 0.10,
