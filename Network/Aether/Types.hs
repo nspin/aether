@@ -57,17 +57,17 @@ import           Control.Applicative
 import           Control.Concurrent.STM
 import           Control.Lens
 import           Control.Monad
-import           Data.Acid
-import           Data.Attoparsec.ByteString
+import           Data.Attoparsec.ByteString hiding (word8)
 import           Data.Aencode
 import           Data.Bits
 import qualified Data.ByteString as B
 import           Data.ByteString.Builder
-import           Data.Octets
+import           Data.LargeWord.Lens
 import           Data.Monoid
 import           Data.Maybe
 import qualified Data.Map as M
 import           Data.Time.Clock
+import           Data.Word (Word8)
 import           Network.Socket
 
 data Env a = Env
@@ -206,22 +206,33 @@ buildWant :: Want -> IBuilder
 buildWant N4 = prefix ("n4" :: B.ByteString)
 buildWant N6 = prefix ("n6" :: B.ByteString)
 
-class (FiniteBits a, Buildable a, Parsable a) => IP a where
+class (FiniteBits a, Homogenous a Word8) => IP a where
     sayAddr :: Addr a -> SockAddr
     family :: a -> Family
 
 type IPv4 = Word32
 type IPv6 = Word128
 
-type Word96  = Octets Word64 Word32
-type Word160 = Octets Word128 Word32
+type Word16  = LargeKey Word8  Word8
+type Word32  = LargeKey Word16 Word16
+type Word64  = LargeKey Word32 Word32
+type Word128 = LargeKey Word64 Word64
+
+type Word96  = LargeKey Word64  Word32
+type Word160 = LargeKey Word128 Word32
+
+parseBE :: Homogenous a Word8 => Parser a
+parseBE = leaves . const $ anyWord8
+
+prefixBE :: Homogenous a Word => a -> (Sum, Builder)
+prefixBE w = (Sum $ lengthOf leaves w, foldMapOf word8 w)
 
 instance IP IPv4 where
-    sayAddr (Addr ip port) = SockAddrInet (PortNum $ changeByteOrder port) ip
+    sayAddr (Addr ip port) = SockAddrInet (PortNum $ id port) ip
     family _ = AF_INET
 
 instance IP IPv6 where
-    sayAddr (Addr ip port) = SockAddrInet6 (PortNum $ changeByteOrder port) 0 (toTuple ip) 0
+    sayAddr (Addr ip port) = SockAddrInet6 (PortNum $ id port) 0 (toTuple ip) 0
     family _ = AF_INET6
 
 toTuple :: Word128 -> HostAddress6

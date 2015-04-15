@@ -19,16 +19,14 @@ library
                        Network.Aether.Flow
   -- other-extensions:
   build-depends:       aencode,
-                       acid-state,
                        attoparsec >= 0.10,
                        base >= 4.7,
                        bytestring >= 0.10.2,
                        containers,
+                       largeword-lens,
                        lens,
                        network,
-                       octets,
                        stm,
                        -- unix-time
-                       time,
-                       wordplay
+                       time
   default-language:    Haskell2010
