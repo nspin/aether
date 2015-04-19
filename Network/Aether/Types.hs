@@ -7,9 +7,7 @@
 
 module Network.Aether.Types
     (
-      Env(..)
-  --
-    , Method (Response, decodeQuery, decodeResp)
+      Method (Response, decodeQuery, decodeResp)
     , pkgQuery
     , pkgResp
     , pkgError
@@ -20,11 +18,11 @@ module Network.Aether.Types
     , AnnouncePeer(..)
     , GetVal(..)
     , GetVar(..)
-  --
+
     , Error
     , ErrorCode
     , decodeError
-  --
+
     , Want
     , parseWant
     , buildWant
@@ -67,8 +65,6 @@ import           Data.Word
 import           GHC.TypeLits
 import           Network.Socket
 
-data Env (n :: Nat) = Env
-
 ------------------
 -- METHOD
 ------------------
@@ -80,7 +76,6 @@ class Method a where
     writeResp  :: Response a -> Mappy
     decodeQuery :: BDict B.ByteString -> Maybe a
     decodeResp  :: BDict B.ByteString -> Maybe (Response a)
-    -- respond    :: Env -> a -> STM (Either Error (Response a))
 
 pkgQuery :: Method a => Bool -> a -> B.ByteString -> BDict IBuilder
 pkgQuery ro q tid = M.fromList $

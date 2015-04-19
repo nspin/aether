@@ -16,6 +16,11 @@ import qualified Data.ByteString.Lazy as L
 import           Network.Socket hiding (sendTo)
 import           Network.Socket.ByteString
 
+data Mailroom = Mailroom
+    { inBound  :: M.Map B.ByteString (TMVar (      B.ByteString))
+    , outBound :: M.Map B.ByteString (TMVar (BDict B.ByteString))
+    }
+
 post :: Env a -> STM (B.ByteString, TMVar (Maybe (Either Error (BDict B.ByteString))))
 post _ = return ("hi", undefined)
 
