@@ -28,7 +28,7 @@ library
                        stm,
                        time,
                        -- NON-HACKAGE:
-                       aencode,
+                       bencode,
                        bigword
 
   hs-source-dirs:      src

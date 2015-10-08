@@ -13,7 +13,7 @@ import           Network.Aether.RW
 import           Control.Concurrent.STM
 import           Control.Exception
 import           Control.Monad
-import           Data.Aencode
+import           Data.Bencode
 import qualified Data.ByteString as B
 import           Data.ByteString.Builder
 import qualified Data.ByteString.Lazy as L

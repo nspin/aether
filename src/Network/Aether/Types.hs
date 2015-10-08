@@ -44,8 +44,8 @@ import           Control.Concurrent.STM
 import           Control.Lens
 import           Control.Monad
 import           Data.Attoparsec.ByteString hiding (word8)
-import           Data.Aencode
-import           Data.BigWord
+import           Data.Bencode
+import           Data.Word.N
 import           Data.Bits
 import qualified Data.ByteString as B
 import           Data.ByteString.Builder

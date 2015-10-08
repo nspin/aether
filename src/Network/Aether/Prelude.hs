@@ -13,10 +13,10 @@ module Network.Aether.Prelude
     ) where
 
 import           Control.Lens
-import           Data.Aencode
+import           Data.Bencode
 import           Data.Attoparsec.ByteString hiding (word8)
 import qualified Data.ByteString as B
-import           Data.BigWord
+import           Data.Word.N
 import           Data.Monoid
 import qualified Data.Map as M
 import           Data.Proxy
