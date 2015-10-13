@@ -9,3 +9,5 @@ This library will eventually implement all of the functionality defined in the f
 *   43 - Read-only DHT Nodes
 *   44 - Storing arbitrary data in the DHT
 *   45 - Multiple-address operations for the BitTorrent DHT
+
+For more information, visit [my website](nickspinale.com/projects.html).
